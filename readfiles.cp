@@ -32,7 +32,7 @@ std::vector<std::string> readImages(std::string a, std::string b) {
   //strcpy(dirname, argv[1]);
     //a = a.substr(1,a.length()-3); // remove ()
   strcpy(dirname, a.c_str());
-    std::cout << ("This is the readfile");
+   // std::cout << ("This is the readfile");
   printf("Processing directory %s\n", dirname );
     
 
@@ -70,7 +70,7 @@ std::vector<std::string> readImages(std::string a, std::string b) {
     }
   }
     closedir(dirp);
-  printf("Terminating\n");
+  //printf("Terminating\n");
 
     return imagePaths;
 }

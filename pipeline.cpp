@@ -20,7 +20,6 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
 
-// TODO: troubleshoot why TargetCenterPicVector is empty
 // Creates the data base for each of my images depending on the task: baselineMatching for example
 void createFeatureDatabase( std::string T, std::string B, int N, std::vector<std::string> imagePaths, std::string csvFile ){
     //If the DB doesn’t already exist, clear the csv, input data into csv
@@ -47,7 +46,7 @@ void createFeatureDatabase( std::string T, std::string B, int N, std::vector<std
             // print out the image filepaths gathered from baseline matching
         }
     }
-    // TODO: All of my ints in histogram matching are inf or Nan, why?
+    // Create histogram matching db
     else if(csvFile == "histogramMatching.csv"){
         for(int k=0; k<imagePaths.size(); k++){
             int Hsize = 8;
@@ -56,7 +55,6 @@ void createFeatureDatabase( std::string T, std::string B, int N, std::vector<std
             int dim[3] = {Hsize, Hsize, Hsize};
             cv::Mat hist = cv::Mat::zeros(3, dim, CV_32F); // floating point
         // Create the histogram
-            //std::vector<float> histogramVector;
             cv::Mat image = cv::imread(imagePaths[k]); // read in the image
             for(i=0; i<image.rows; i++){ // rows
                 cv::Vec3b *sptr = image.ptr<cv::Vec3b>(i); // cols
@@ -69,7 +67,7 @@ void createFeatureDatabase( std::string T, std::string B, int N, std::vector<std
             }
             //normalize the histogram - should be sum of 1 at the end
             float sum = 0.0;
-            sum = cv::sum(hist)[0]; // sum of histogram buckets - bucket is location in the array
+            sum = cv::sum(hist)[0];
             hist /= sum;
             std::vector<float> flatHist = flattenHist(hist);
             // write to csv
@@ -82,7 +80,7 @@ void createFeatureDatabase( std::string T, std::string B, int N, std::vector<std
             
         }
     }
-    
+    // create multihist matching
     else if(csvFile == "multiHistogramMatching"){
         // Get the full historgram, using code like histogram matching
         for(int k=0; k<imagePaths.size(); k++){
@@ -103,9 +101,12 @@ void createFeatureDatabase( std::string T, std::string B, int N, std::vector<std
                     hist.at<float>(b, g, r)++;
                 }
             }
+            float sum = 0.0;
+            sum = cv::sum(hist)[0];
+            hist /= sum;
             std::vector<float> flatHist = flattenHist(hist);
             // get the center pic and repeat
-            std::vector<float> centerPicVector; // ints of center pic for each image
+            std::vector<float> centerPicVector;
             cv::Mat imageCenter = cv::imread(imagePaths[i]);
             centerPic(imageCenter, centerPicVector);
             // Append my centerpic data to the end of my histogram data
@@ -139,7 +140,6 @@ std::vector<float> calcTarget(std::string T, std::string csvFile, std::vector<st
         int dim[3] = {Hsize, Hsize, Hsize};
         cv::Mat hist = cv::Mat::zeros(3, dim, CV_32F); // floating point
     // Create the histogram
-        //std::vector<float> histogramVector;
         cv::Mat image = cv::imread(T); // read in the image
         for(i=0; i<image.rows; i++){ // rows
             cv::Vec3b *sptr = image.ptr<cv::Vec3b>(i); // cols
@@ -151,9 +151,9 @@ std::vector<float> calcTarget(std::string T, std::string csvFile, std::vector<st
             }
         }
         //normalize the histogram - should be sum of 1 at the end
-        //float sum = 0.0;
-        //sum = cv::sum(hist)[0]; // sum of histogram buckets - bucket is location in the array
-        //hist /= sum;
+        float sum = 0.0;
+        sum = cv::sum(hist)[0];
+        hist /= sum;
         std::vector<float> TargetVector = flattenHist(hist);
     }
     else if(csvFile == "multiHistogramMatching"){
@@ -176,6 +176,9 @@ std::vector<float> calcTarget(std::string T, std::string csvFile, std::vector<st
                     hist.at<float>(b, g, r)++;
                 }
             }
+            float sum = 0.0;
+            sum = cv::sum(hist)[0];
+            hist /= sum;
             std::vector<float> flatHist = flattenHist(hist);
             // get the center pic and repeat
             std::vector<float> centerPicVector; // ints of center pic for each image
@@ -200,6 +203,7 @@ std::vector<string> distCalc(std::vector<float> TargetVector, std::string B, int
     std::vector<std::string> topImages;
     // create baseline
     if(csvFile == "baselineMatching.csv"){
+        std::vector<pair<float, string>> baselineSortVec;
         for(int i=0; i<imagePaths.size(); i++){
             std::vector<float> centerPicVector; // ints of center pic for each image
             cv::Mat image = cv::imread(imagePaths[i]);
@@ -208,7 +212,7 @@ std::vector<string> distCalc(std::vector<float> TargetVector, std::string B, int
             // Sum of squared error
             float targetSSE =0.0;
             float currentImageSSE = 0.0;
-            cout << "\n in baseline sse";
+            //cout << "\n in baseline sse";
             //cout << "\n" << TargetVector << "\n";
             // SSE calculation
             for( int j = 0; j<243; j++){
@@ -218,17 +222,17 @@ std::vector<string> distCalc(std::vector<float> TargetVector, std::string B, int
             }
             dist = targetSSE - currentImageSSE;
             // thank you to Ravina for code inspiration
-            std::vector<pair<float, string>> baselineSortVec;
             baselineSortVec.push_back(make_pair(dist,imagePaths[i]));
-            sort(baselineSortVec.begin(),baselineSortVec.end());
-            cout << "\n Top Images for baselineMatching";
-            for (int i=0; i<N; i++){
-                //topImages.push_back(baselineSortVec[i].second);
-                cout << "\n" << baselineSortVec[i].second;
             }
+        sort(baselineSortVec.begin(),baselineSortVec.end());
+        cout << "\n Top Images for baselineMatching";
+        for (int i=0; i<N; i++){
+            //topImages.push_back(baselineSortVec[i].second);
+            cout << "\n" << baselineSortVec[i].second;
         }
     }
     else if (csvFile == "histogramMatching.csv"){
+        std::vector<pair<float, string>> histogramSortVec;
         for(int k=0; k<imagePaths.size(); k++){
             int Hsize = 8;
             int divisor = 256 / Hsize;
@@ -247,16 +251,16 @@ std::vector<string> distCalc(std::vector<float> TargetVector, std::string B, int
                     hist.at<float>(b, g, r)++;
                 }
             }
-            //float sum = 0.0;
-            //sum = cv::sum(hist)[0]; // sum of histogram buckets - bucket is location in the array
-            //hist /= sum;
+            float sum = 0.0;
+            sum = cv::sum(hist)[0]; // sum of histogram buckets - bucket is location in the array
+            hist /= sum;
             std::vector<float> flatHist = flattenHist(hist);
             double intersection = 0.0;
             // compute sum of histogram buckets.
             double sumT = 0.0;
             double sumI = 0.0;
             for( int i=0; i<flatHist.size();i++){
-                sumT += TargetVector[i];
+                sumT += TargetVector[i]; //TODO: Here is the problem
                 sumI += flatHist[i];
             }
             // compute intersection
@@ -267,14 +271,13 @@ std::vector<string> distCalc(std::vector<float> TargetVector, std::string B, int
             }
             intersection = (1.0 - intersection);
             
-            std::vector<pair<float, string>> baselineSortVec;
-            baselineSortVec.push_back(make_pair(intersection,imagePaths[i]));
-            sort(baselineSortVec.begin(),baselineSortVec.end());
-            cout << "\n Top Images for histogramMatching";
-            for (int i=0; i<N; i++){
-                //topImages.push_back(baselineSortVec[i].second);
-                cout << "\n" << baselineSortVec[i].second;
+            histogramSortVec.push_back(make_pair(intersection,imagePaths[i]));
             }
+        sort(histogramSortVec.begin(),histogramSortVec.end());
+        cout << "\n Top Images for histogramMatching";
+        for (int i=0; i<N; i++){
+            //topImages.push_back(baselineSortVec[i].second);
+            cout << "\n" << histogramSortVec[i].second;
         }
     }
     else if(csvFile == "multiHistogramMatching"){
@@ -294,6 +297,9 @@ std::vector<string> distCalc(std::vector<float> TargetVector, std::string B, int
                     hist.at<float>(b, g, r)++;
                 }
             }
+            float sum = 0.0;
+            sum = cv::sum(hist)[0];
+            hist /= sum;
             std::vector<float> flatHist = flattenHist(hist);
             // get the center pic and repeat
             std::vector<float> centerPicVector; // ints of center pic for each image
@@ -342,7 +348,6 @@ std::vector<string> distCalc(std::vector<float> TargetVector, std::string B, int
 }
 
 void pipeline( std::string T, std::string B, int N, std::string csvFile){
-    //Take input as target image TODO: type of matching can be added later
     //Go through whole DB via the function readfiles
     std::string database = B; //Filepath to olympus
     std::string dirName = "olympus";
@@ -352,7 +357,7 @@ void pipeline( std::string T, std::string B, int N, std::string csvFile){
     createFeatureDatabase(T, B, N, imagePaths, csvFile);
     // now I have a csv file as a feature db, for baseline, it is a image row and 243 values for RGB for each pixel.
     std::vector<float> TargetVector;
-    calcTarget(T, csvFile, imagePaths, TargetVector);
+    TargetVector = calcTarget(T, csvFile, imagePaths, TargetVector);
     distCalc(TargetVector, B, N, imagePaths,csvFile);
 }
 
