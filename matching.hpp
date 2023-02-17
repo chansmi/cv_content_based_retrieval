@@ -13,4 +13,7 @@
 
 void centerPic( cv::Mat &src, std::vector<float> &vector);
 
+
+std::vector<float> flattenHist( cv::Mat hist);
+
 #endif /* matching_hpp */

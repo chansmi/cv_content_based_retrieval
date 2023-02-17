@@ -10,6 +10,6 @@
 #include <stdio.h>
 using namespace std;
 
-void pipeline( std::string T, std::string B, int N);
+void pipeline( std::string T, std::string B, int N, std::string csvFile);
 
 #endif /* pipeline_hpp */
