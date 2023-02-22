@@ -56,9 +56,9 @@ std::vector<std::string> readImages(std::string a, std::string b) {
 	strstr(dp->d_name, ".tif") ) {
 
       //printf("processing image file: %s\n", dp->d_name);
-
       // build the overall filename
-      strcpy(buffer, dirname);
+        strcpy(buffer, "/Users/chandlersmith/Desktop/CS5330/2_Project/2_Project/olympus" ); // changed from dirname
+        
       strcat(buffer, "/");
       strcat(buffer, dp->d_name);
 

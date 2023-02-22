@@ -13,7 +13,9 @@
 
 void centerPic( cv::Mat &src, std::vector<float> &vector);
 
-
 std::vector<float> flattenHist( cv::Mat hist);
 
+cv::Mat normHistogram( std::string imagePaths, cv::Mat &hist );
+
+std::vector<float> texture( cv::Mat src );
 #endif /* matching_hpp */

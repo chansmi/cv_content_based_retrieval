@@ -40,6 +40,7 @@ void centerPic( cv::Mat &src, std::vector<float> &vector){
 }
 
 
+// Takes the histogram and turns it into a flat list of values
 std::vector<float> flattenHist( cv::Mat hist){
     std::vector<float> flatHist(512);
     int i, j, k;
@@ -55,3 +56,138 @@ std::vector<float> flattenHist( cv::Mat hist){
     return flatHist;
 }
 
+// sobel texture
+// Sobol filter
+// 3x3 x values, first dirivitive in x direction
+// pass it over every pizel to determine edge gradients
+int sobelX3x3( cv::Mat &src, cv::Mat &dst ){
+    // src is unsigned (0, 255)
+    // need destination to be sign
+    cv::Mat temp(src.rows, src.cols, CV_16SC3);
+    dst = src.clone();
+    dst.convertTo(dst, CV_16SC3);
+
+    // iterating over rows
+    for(int i=0;i<src.rows;i++) {
+        for(int j=1;j<src.cols-1;j++) {
+            cv::Vec3s &tptr = temp.at<cv::Vec3s>(i,j);
+            for(int c = 0; c <= 2; c++)
+            {
+                tptr[c] = (1*src.at<cv::Vec3b>(i, j-1)[c] + 0*src.at<cv::Vec3b>(i, j)[c] + -1*src.at<cv::Vec3b>(i, j+1)[c]);
+            }
+        }
+    }
+    // iterating over columns
+    for(int i=1;i<src.rows-1;i++) {
+        for(int j=0;j<src.cols;j++){
+            cv::Vec3s &dptr = dst.at<cv::Vec3s>(i,j);
+            for(int c = 0; c <= 2; c++)
+            {
+                dptr[c] = (1*temp.at<cv::Vec3s>(i-1, j)[c] + 2*temp.at<cv::Vec3s>(i, j)[c] + 1*temp.at<cv::Vec3s>(i+1, j)[c]);
+                dptr[c] = dptr[c]/4;// Normalize by 4
+            }
+        }
+    }
+    return 0;
+}
+// 3x3 y values, the inverse of the above function
+int sobelY3x3( cv::Mat &src, cv::Mat &dst ){
+    cv:: Mat3s temp(src.rows, src.cols, CV_16SC3);
+    dst = src.clone();
+    dst.convertTo(dst, CV_16SC3);
+    // Columns
+    for(int i=0;i<src.rows;i++) {
+        for(int j=1;j<src.cols-1;j++){
+            cv::Vec3s &tptr = temp.at<cv::Vec3s>(i,j);
+            for(int c = 0; c <= 2; c++)
+            {
+                tptr[c] = (1*src.at<cv::Vec3b>(i, j-1)[c] + 2*src.at<cv::Vec3b>(i, j)[c] + 1*src.at<cv::Vec3b>(i, j+1)[c]);
+                //tptr[c] = tptr(i,j)[c]/4;
+            }
+        }
+    }
+        // iterate over columns
+    for(int i=1;i<src.rows-1;i++) {
+        for(int j=0;j<src.cols;j++) {
+            cv::Vec3s &dptr = dst.at<cv::Vec3s>(i,j);
+            for(int c = 0; c <= 2; c++)
+            {
+                dptr[c] = (-1*temp.at<cv::Vec3s>(i-1, j)[c] + 0*temp.at<cv::Vec3s>(i, j)[c] + 1*temp.at<cv::Vec3s>(i+1, j)[c]);
+                dptr[c] = dptr[c]/4;
+            }
+        }
+    }
+    return 0;
+}
+
+// magnitude helper
+int magnitude( cv::Mat &sx, cv::Mat &sy, cv::Mat &dst ){
+    dst = sx.clone();
+    // magnitute is sqrt of sx2 + sy2
+    for(int i=0;i<sx.rows;i++) { //sx is interchangable with sy
+        for(int j=0;j<sx.cols;j++) {
+            // x value from sx and y value from sy
+            cv::Vec3s &x = sx.at<cv::Vec3s>(i, j);
+            cv::Vec3s &y = sy.at<cv::Vec3s>(i, j);
+            // run the Euclidean calculation for BGR so it is color
+            short b = sqrt(pow(x[0], 2) + pow(y[0], 2));
+            short g = sqrt(pow(x[1], 2) + pow(y[1], 2));
+            short r = sqrt(pow(x[2], 2) + pow(y[2], 2));
+            dst.at<cv::Vec3s>(i, j)[0] = b;
+            dst.at<cv::Vec3s>(i, j)[1] = g;
+            dst.at<cv::Vec3s>(i, j)[2] = r;
+        }
+    }
+    return 0;
+}
+
+// Texture helper function
+std::vector<float> texture( cv::Mat src ){
+    cv::Mat x, y, output, y_output, mag;
+    std::vector<float> vector;
+    cv::Mat dst = src.clone();
+    // gradient Magnitude calculation
+    sobelX3x3(src, output);
+    cv::convertScaleAbs(output, x);
+    sobelY3x3(src, y_output);
+    cv::convertScaleAbs(y_output, y);
+
+    magnitude(x, y, mag); // TODO: Fix as this is returning 0s
+    cv::convertScaleAbs(mag, dst);
+    //std::cout << "\n Magnitude" << dst;
+    int i, j, c;
+    for(i=0; i<dst.rows; i++){
+        for(j=0;j<dst.cols;j++){
+            for(c=0; c<3; c++){ //channel
+                int val = int(dst.at<cv::Vec3b>(i,j)[c]);
+                vector.push_back(val);
+            }
+        }
+    }
+    return vector;
+}
+// unused
+cv::Mat normHistogram( std::string imagePaths, cv::Mat &hist ){
+    
+        int Hsize = 8;
+        int divisor = 256 / Hsize;
+        int i, j;
+        int dim[3] = {Hsize, Hsize, Hsize};
+        hist = cv::Mat::zeros(3, dim, CV_32F); // floating point
+        // Create the histogram
+        cv::Mat image = cv::imread(imagePaths); // read in the image
+        for(i=0; i<image.rows; i++){ // rows
+            cv::Vec3b *sptr = image.ptr<cv::Vec3b>(i); // cols
+            for(j=0;j<image.cols;j++){
+                float b = sptr[j][0] / divisor;
+                float g = sptr[j][1] / divisor;
+                float r = sptr[j][2] / divisor;
+                hist.at<float>(b, g, r)++;
+            }
+        }
+        //normalize the histogram - should be sum of 1 at the end
+        float sum = 0.0;
+        sum = cv::sum(hist)[0];
+        hist /= sum;
+        return hist;
+}

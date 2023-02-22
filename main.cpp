@@ -31,13 +31,16 @@ int main(int argc, const char * argv[]) {
         std::cout << argv[i] << "\n";
     }
     
-    //cout << "test main";
     // Now that I have successfully read in my arguments and can run the code, now it is time to reference the pipeline.
     // Below are the various types of matching, beginning with baseline matching.
+    // you can uncomment the following code as needed
+    //std::string T = argv[1]; // Target
     //std::string matching = "baselineMatching.csv";
     //std::string matching = "histogramMatching.csv";
-    std::string matching = "multiHistogramMatching.csv";
+    //std::string matching = "multiHistogramMatching.csv";
     //std::string matching = "textureAndColor.csv";
+    std::string matching = "customDesign.csv";
+
     pipeline( T, B, N, matching);
     
     
